@@ -2,13 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sahkan Kod TAC</title>
+    <title>Verify TAC Code</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CSS Tambahan untuk menyembunyikan anak panah input nombor */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
 </head>
 <body class="bg-blue-50 min-h-screen flex items-center justify-center">
 
     <div class="w-full max-w-md bg-white rounded-2xl shadow-md p-8">
-        <h2 class="text-2xl font-bold text-blue-600 mb-6 text-center">Sahkan Kod TAC</h2>
+        <h2 class="text-2xl font-bold text-blue-600 mb-6 text-center">Verify TAC Code</h2>
 
         <p class="text-sm text-gray-600 mb-4 text-center">
             Kod TAC telah dihantar ke <strong>{{ $email }}</strong>.
@@ -20,16 +31,23 @@
     </div>
 @endif
 
-        <form method="POST" action="{{ route('login.verify') }}" class="space-y-4">
+        <form method="POST" action="{{ route('login.verify') }}" class="space-y-4" id="tac-form">
             @csrf
 
             <input type="hidden" name="email" value="{{ $email }}">
+            
+            <input type="hidden" name="code" id="hidden_tac_code">
 
             <div>
-                <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Kod TAC</label>
-                <input type="text" name="code" id="code" required maxlength="6"
-                       class="w-full px-4 py-3 border rounded-lg focus:ring focus:ring-blue-200 focus:outline-none"
-                       placeholder="Contoh: 123456">
+                <label for="code-input-1" class="block text-sm font-medium text-gray-700 mb-1">TAC Code</label>
+                
+                <div class="flex justify-between gap-2" id="code-inputs">
+                    @for ($i = 1; $i <= 6; $i++)
+                        <input type="number" id="code-input-{{ $i }}" data-index="{{ $i }}" maxlength="1" required 
+                               inputmode="numeric" pattern="\d*" autocomplete="off"
+                               class="w-10 h-12 text-center text-xl border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition font-mono" />
+                    @endfor
+                </div>
             </div>
 
             <button type="submit"
@@ -38,6 +56,54 @@
             </button>
         </form>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputs = document.querySelectorAll('#code-inputs input');
+            const hiddenInput = document.getElementById('hidden_tac_code');
+            const form = document.getElementById('tac-form');
+
+            // Tetapkan fokus ke input pertama apabila dimuatkan
+            inputs[0].focus();
+
+            inputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    
+                    // Padamkan input bukan digit dan hadkan kepada satu karakter
+                    e.target.value = value.replace(/[^0-9]/g, '').slice(0, 1);
+
+                    // Lompat ke kotak seterusnya
+                    if (e.target.value.length === 1 && index < inputs.length - 1) {
+                        inputs[index + 1].focus();
+                    }
+                });
+
+                input.addEventListener('keydown', (e) => {
+                    // Handle Backspace: lompat ke input sebelumnya
+                    if (e.key === 'Backspace' && e.target.value.length === 0 && index > 0) {
+                        inputs[index - 1].focus();
+                    }
+                });
+            });
+
+            // Handle submission: gabungkan 6 input ke dalam hidden field sebelum hantar ke backend
+            form.addEventListener('submit', (e) => {
+                let code = '';
+                inputs.forEach(input => {
+                    code += input.value;
+                });
+                hiddenInput.value = code;
+
+                // Validation asas: pastikan semua 6 kotak diisi
+                if (code.length !== 6) {
+                    e.preventDefault(); 
+                    alert('Sila masukkan 6 digit Kod TAC yang lengkap.');
+                    inputs[0].focus();
+                }
+            });
+        });
+    </script>
 
 </body>
 </html>
